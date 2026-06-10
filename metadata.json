@@ -1,0 +1,6 @@
+{
+  "name": "Gemini Chat",
+  "description": "Ultra-modern, highly responsive ChatGPT-like AI agent chatbot, powered by the Gemini API.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

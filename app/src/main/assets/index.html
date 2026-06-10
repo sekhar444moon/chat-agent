@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gemini Chat Agent</title>
+  
+  <!-- Font and Icon CDNs -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  
+  <!-- Tailwind Play CSS Engine -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            chatgray: {
+              50: '#f9faeb',
+              100: '#f3f4f6',
+              200: '#e5e7eb',
+              300: '#d1d5db',
+              400: '#9ca3af',
+              500: '#6b7280',
+              600: '#4b5563',
+              700: '#374151',
+              750: '#262d3a',
+              800: '#1f2937',
+              850: '#1e2026',
+              900: '#111827',
+              950: '#0b0f19',
+            }
+          },
+          animation: {
+            'bounce-slow': 'bounce 1.4s infinite',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Markdown Parser and Syntax Highlighter Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-chatgray-100 text-chatgray-800 dark:bg-chatgray-950 dark:text-chatgray-200 h-screen flex overflow-hidden theme-transition transition-colors duration-200">
+
+  <!-- Mobile Sidebar Overlay (backdrop) -->
+  <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 z-30 hidden md:hidden" onclick="toggleSidebar()"></div>
+
+  <!-- Sidebar Container -->
+  <aside id="sidebar" class="fixed inset-y-0 left-0 w-72 bg-white dark:bg-chatgray-900 border-r border-chatgray-200 dark:border-chatgray-800 z-40 transform -translate-x-full md:relative md:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col h-full">
+    
+    <!-- Sidebar Header -->
+    <div class="p-4 border-b border-chatgray-200 dark:border-chatgray-800 flex items-center justify-between">
+      <button onclick="startNewChat()" class="flex-1 flex items-center justify-center gap-2 border border-chatgray-300 dark:border-chatgray-700 hover:bg-chatgray-50 dark:hover:bg-chatgray-800 text-chatgray-700 dark:text-chatgray-200 px-4 py-2.5 rounded-lg text-sm font-medium transition duration-150">
+        <i class="fa-solid fa-plus text-xs"></i>
+        <span>New Chat</span>
+      </button>
+      <button onclick="toggleSidebar()" class="md:hidden ml-2 p-2.5 rounded-lg hover:bg-chatgray-100 dark:hover:bg-chatgray-800 text-chatgray-500 dark:text-chatgray-400">
+        <i class="fa-solid fa-chevron-left text-sm"></i>
+      </button>
+    </div>
+
+    <!-- History list section -->
+    <div class="flex-1 overflow-y-auto px-3 py-4 space-y-1.5" id="history-list">
+      <!-- Dynamic list in js -->
+    </div>
+
+    <!-- Sidebar Bottom controls -->
+    <div class="p-4 border-t border-chatgray-200 dark:border-chatgray-800 space-y-2">
+      <!-- Rate Limit & API Alert Section -->
+      <div id="quota-warning-badge" class="hidden flex items-start gap-2.5 bg-yellow-50 dark:bg-yellow-950/40 border border-yellow-200 dark:border-yellow-900/50 p-3 rounded-lg text-xs text-yellow-800 dark:text-yellow-400">
+        <i class="fa-solid fa-circle-exclamation mt-0.5 text-base text-yellow-600 dark:text-yellow-500"></i>
+        <div>
+          <span class="font-semibold block">API Quota / Rate Limit</span>
+          <span id="warning-text">API Quota exceeded or call rate-limited. Please verify key rules or try again.</span>
+        </div>
+      </div>
+
+      <!-- Settings Buttons -->
+      <button onclick="clearHistory()" class="w-full flex items-center gap-3 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 px-3 py-2.5 rounded-lg transition duration-150">
+        <i class="fa-solid fa-trash-can w-5"></i>
+        <span>Clear History</span>
+      </button>
+
+      <button onclick="toggleTheme()" class="w-full flex items-center gap-3 text-sm font-medium text-chatgray-600 dark:text-chatgray-450 hover:bg-chatgray-100 dark:hover:bg-chatgray-800 px-3 py-2.5 rounded-lg transition duration-150">
+        <i id="theme-icon" class="fa-solid fa-moon w-5"></i>
+        <span id="theme-text">Dark Mode</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Chat Section Container -->
+  <main class="flex-1 flex flex-col h-full overflow-hidden relative bg-chatgray-50 dark:bg-chatgray-950">
+    
+    <!-- Warning Bar for Unset Setup Keys -->
+    <div id="missing-key-banner" class="hidden bg-orange-500 text-white px-4 py-2.5 text-center text-xs font-semibold flex items-center justify-center gap-2 z-20">
+      <i class="fa-solid fa-key-skeleton"></i>
+      <span>Gemini API Key is not configured yet. Please configure it in your AI Studio Secrets panel.</span>
+    </div>
+
+    <!-- Main Navigation Header -->
+    <header class="h-14 bg-white dark:bg-chatgray-900 border-b border-chatgray-200 dark:border-chatgray-800 flex items-center justify-between px-4 z-10">
+      <div class="flex items-center gap-3">
+        <button onclick="toggleSidebar()" class="p-2 -ml-1 rounded-lg hover:bg-chatgray-100 dark:hover:bg-chatgray-800 text-chatgray-500 dark:text-chatgray-400">
+          <i class="fa-solid fa-bars text-lg"></i>
+        </button>
+        <span id="current-chat-title" class="text-sm font-semibold truncate max-w-[200px] md:max-w-[400px]">Gemini AI Assistant</span>
+        <span class="bg-indigo-100 text-indigo-800 dark:bg-indigo-950/55 dark:text-indigo-400 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider">Gemini 3.5</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="clearCurrentChat()" class="p-2 rounded-lg hover:bg-chatgray-100 dark:hover:bg-chatgray-800 text-chatgray-500 dark:text-chatgray-400 transition" title="Clear Current Chat">
+          <i class="fa-solid fa-broom text-sm"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Chat Message Container -->
+    <div id="messages-container" class="flex-1 overflow-y-auto px-4 py-6 md:px-8 space-y-6">
+      
+      <!-- Welcome Empty Chat State -->
+      <div id="empty-state" class="max-w-2xl mx-auto py-12 md:py-20 flex flex-col items-center justify-center text-center space-y-8 h-full">
+        <div class="w-16 h-16 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-xl shadow-indigo-500/10">
+          <i class="fa-solid fa-wand-magic-sparkles text-2xl"></i>
+        </div>
+        <div class="space-y-2">
+          <h1 class="text-3xl font-bold tracking-tight text-chatgray-950 dark:text-white">How can I help you today?</h1>
+          <p class="text-sm text-chatgray-550 dark:text-chatgray-400 max-w-md">Ask questions, generate beautiful code blocks, organize plans or summarize concepts with Gemini.</p>
+        </div>
+
+        <!-- Suggestion Grid Box -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full text-left">
+          <div onclick="applySuggestion('Explain quantum computing in simple terms for a teenager')" class="group p-4 bg-white dark:bg-chatgray-900 border border-chatgray-200 dark:border-chatgray-800 rounded-xl hover:border-indigo-500 dark:hover:border-indigo-600 hover:shadow-md cursor-pointer transition duration-150">
+            <span class="block text-sm font-semibold text-chatgray-950 dark:text-white group-hover:text-indigo-500 transition">Explain quantum computing</span>
+            <span class="block text-xs text-chatgray-500 dark:text-chatgray-400 mt-1">in simple terms for a teenager</span>
+          </div>
+          <div onclick="applySuggestion('Write a clean JavaScript async fetch function with error handling')" class="group p-4 bg-white dark:bg-chatgray-900 border border-chatgray-200 dark:border-chatgray-800 rounded-xl hover:border-indigo-500 dark:hover:border-indigo-600 hover:shadow-md cursor-pointer transition duration-150">
+            <span class="block text-sm font-semibold text-chatgray-950 dark:text-white group-hover:text-indigo-500 transition">Write an async fetch</span>
+            <span class="block text-xs text-chatgray-500 dark:text-chatgray-400 mt-1">JavaScript function with robust error handling</span>
+          </div>
+          <div onclick="applySuggestion('Create a structured 3-day itinerary for an explorer visiting Tokyo')" class="group p-4 bg-white dark:bg-chatgray-900 border border-chatgray-200 dark:border-chatgray-800 rounded-xl hover:border-indigo-500 dark:hover:border-indigo-600 hover:shadow-md cursor-pointer transition duration-150">
+            <span class="block text-sm font-semibold text-chatgray-950 dark:text-white group-hover:text-indigo-500 transition">Plan an explorer trip</span>
+            <span class="block text-xs text-chatgray-500 dark:text-chatgray-400 mt-1">3 days visiting the best spots in Tokyo</span>
+          </div>
+          <div onclick="applySuggestion('Help me write a professional mail requesting feedback from an investor')" class="group p-4 bg-white dark:bg-chatgray-900 border border-chatgray-200 dark:border-chatgray-800 rounded-xl hover:border-indigo-500 dark:hover:border-indigo-600 hover:shadow-md cursor-pointer transition duration-150">
+            <span class="block text-sm font-semibold text-chatgray-950 dark:text-white group-hover:text-indigo-500 transition">Draft investment mail</span>
+            <span class="block text-xs text-chatgray-500 dark:text-chatgray-400 mt-1">requesting feedback on early metrics</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real active conversation list container -->
+      <div id="messages-list" class="max-w-3xl mx-auto space-y-6 hidden">
+        <!-- Message list in js -->
+      </div>
+    </div>
+
+    <!-- Bottom input section -->
+    <div class="border-t border-chatgray-200 dark:border-chatgray-800 bg-white/70 dark:bg-chatgray-900/60 backdrop-blur-md p-4">
+      <div class="max-w-3xl mx-auto space-y-2">
+        <form id="chat-form" onsubmit="handleChatSubmit(event)" class="relative flex items-center border border-chatgray-300 dark:border-chatgray-700 bg-white dark:bg-chatgray-950 rounded-xl shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 dark:focus-within:ring-indigo-600 focus-within:border-transparent transition overflow-hidden">
+          <textarea 
+            id="chat-input" 
+            placeholder="Type a message... (Enter to send, Shift+Enter for new line)"
+            rows="1"
+            class="flex-1 py-3.5 pl-4 pr-12 bg-transparent resize-none focus:outline-none text-sm leading-relaxed max-h-40 min-h-[46px] overflow-y-auto"
+            onkeydown="handleTextareaKeydown(event)"
+          ></textarea>
+          <button type="submit" id="send-btn" class="absolute right-2 p-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center transition disabled:opacity-40 disabled:hover:bg-indigo-600" disabled>
+            <i class="fa-solid fa-arrow-up text-sm"></i>
+          </button>
+        </form>
+        <p class="text-[10px] text-center text-chatgray-400 dark:text-chatgray-500 tracking-wide">
+          Gemini Chat of AI Studio may produce inaccurate info. Under API quotas? Toggle modes, or clear history as needed.
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

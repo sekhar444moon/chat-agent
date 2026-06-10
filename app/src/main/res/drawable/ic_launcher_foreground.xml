@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Outer Speech Bubble Silhouette -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 28,26 h 52 a 8,8 0 0 1 8,8 v 28 a 8,8 0 0 1 -8,8 H 64 l -10,10 v -10 H 28 a 8,8 0 0 1 -8,-8 V 34 a 8,8 0 0 1 8,-8 z" />
+        
+    <!-- AI Sparkle Icon inside speech bubble -->
+    <path
+        android:fillColor="#4F46E5"
+        android:pathData="M 54,36 Q 54,46 44,46 Q 54,46 54,56 Q 54,46 64,46 Q 54,46 54,36 z" />
+
+    <!-- Secondary Accent Sparkle -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M 72,32 Q 72,36 68,36 Q 72,36 72,40 Q 72,36 76,36 Q 72,36 72,32 z" />
+</vector>
